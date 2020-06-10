@@ -13,7 +13,8 @@ describe('microphone', () => {
       return expect(mic.connect()).to.eventually.equal(undefined);
     })
 
-    it('can start recording', () => {
+    it('can start recording', async () => {
+      await delayms(1000)
       expect(mic.record()).to.equal(undefined)
       expect(mic.isRecording()).to.equal(true)
     })
