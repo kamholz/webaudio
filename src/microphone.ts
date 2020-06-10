@@ -46,7 +46,7 @@ export class Microphone {
   debugMode: boolean
   obsWorker: Subject<any>
   processing: boolean = false
-  pinterval: number = null
+  pinterval: ReturnType<typeof setTimeout> = null
   constructor(config?: {audioContext?: AudioContext, debug?: boolean, bufferLen?: number, resampleRate?: number}) {
     this.audioContext = config && config.audioContext ? config.audioContext : new AudioContext()
     this.debugMode = config && config.debug ? config.debug : false

@@ -26,7 +26,7 @@ export class WebAudioPlayer {
   startPlay: Date
   startOffset: number
   debugMode: boolean = false
-  pinterval: number = null
+  pinterval: ReturnType<typeof setTimeout> = null
   constructor(config?: {audioContext?: AudioContext, debug?: boolean}) {
     this.audioContext = config && config.audioContext ? config.audioContext : new AudioContext()
     this.debugMode = config && config.debug ? config.debug : false
