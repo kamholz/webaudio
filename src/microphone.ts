@@ -1,7 +1,6 @@
 import { Subject } from 'rxjs/Subject'
 import { Observable } from 'rxjs/Observable'
-import 'rxjs/add/operator/takeWhile'
-import 'rxjs/add/operator/map'
+import { takeWhile, map } from 'rxjs/operators'
 import { aikumicWorker } from './worker'
 
 export interface RecordStats {
@@ -366,7 +365,7 @@ export class Microphone {
   }
 
   _getBufferFromWorker(): Observable<Float32Array> {
-    const takeUntilInclusive = (inner$, predicate) => {
+    const takeUntilInclusive = <T>(inner$: Observable<T>, predicate: (x: T) => boolean): Observable<T> => {
       return Observable.create(observer => {
         let subscription = inner$.subscribe(item => {
           observer.next(item)
@@ -380,9 +379,9 @@ export class Microphone {
       })
     }
     this.worker.postMessage({command: 'streamBuffer'})
-    let o = this.obsWorker.takeWhile(msg => msg.command === 'streamBuffer')
+    let o = this.obsWorker.pipe(takeWhile(msg => msg.command === 'streamBuffer'))
     return takeUntilInclusive(o, val => val.remaining === 0)
-      .map(val => val.data)
+      .pipe(map(val => val.data))
   }
 
   // remove the progress subject from the onaudioprocess event
