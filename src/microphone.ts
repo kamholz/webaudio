@@ -1,5 +1,4 @@
-import { Subject } from 'rxjs/Subject'
-import { Observable } from 'rxjs/Observable'
+import { Observable, Subject } from 'rxjs'
 import { takeWhile, map } from 'rxjs/operators'
 import { aikumicWorker } from './worker'
 

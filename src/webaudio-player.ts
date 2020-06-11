@@ -1,5 +1,4 @@
-import { Subject } from 'rxjs/Subject'
-import { Observable } from 'rxjs/Observable'
+import { Observable, Subject } from 'rxjs'
 
 // Typecript doesn't know about window.fetch 
 // https://github.com/Microsoft/TypeScript/issues/8966
