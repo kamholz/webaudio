@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs/Observable'
+import { Observable } from 'rxjs'
 
 // worker is a tweaked version of the one from RecorderJS - assumes mono, removed wav writing
 export function aikumicWorker() {
