@@ -45,18 +45,22 @@ export class Microphone {
   obsWorker: Subject<any>
   processing: boolean = false
   pinterval: ReturnType<typeof setTimeout> = null
-  constructor(config?: {audioContext?: AudioContext, debug?: boolean, bufferLen?: number, resampleRate?: number}) {
+  constructor(config?: {audioContext?: AudioContext, debug?: boolean, bufferLen?: number, resampleRate?: number, resample?: boolean}) {
     this.audioContext = config && config.audioContext ? config.audioContext : new AudioContext()
     this.debugMode = config && config.debug ? config.debug : false
-    if (config && config.resampleRate ) {
-      if (config.resampleRate < 3000 || config.resampleRate >= this.audioContext.sampleRate) {
-        throw new Error('Invalid reSample rate')
-      } else {
-        this.config.sampleRate = config.resampleRate
+    if (config) {
+      if (config.resample === false) {
+        this.config.sampleRate = this.audioContext.sampleRate
+      } else if (config.resampleRate) {
+        if (config.resampleRate < 3000 || config.resampleRate >= this.audioContext.sampleRate) {
+          throw new Error('Invalid reSample rate')
+        } else {
+          this.config.sampleRate = config.resampleRate
+        }
       }
-    }
-    if (config && config.bufferLen ) {
-      this.config.bufferLen = config.bufferLen
+      if (config.bufferLen) {
+        this.config.bufferLen = config.bufferLen
+      }
     }
     this._init()
   }
