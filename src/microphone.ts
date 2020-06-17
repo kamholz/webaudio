@@ -36,6 +36,8 @@ export class Microphone {
   startFlag: boolean = false
   worker: Worker
   ready: boolean = false
+  onready: Promise<any> = null
+  onreadyResolve: Function = null
   startRecording: Date = null
   finalBuffers: Float32Array[] = []
   callbacks: {getBuffer: Function[]} = {
@@ -420,6 +422,9 @@ export class Microphone {
   }
 
   _initWorker() {
+    this.onready = new Promise((resolve) => {
+      this.onreadyResolve = resolve
+    })
     const makeInlineWorker = (func: any): Worker => {
       let functionBody = func.toString().trim().match(
         /^function\s*\w*\s*\([\w\s,]*\)\s*{([\w\W]*?)}$/
@@ -433,6 +438,7 @@ export class Microphone {
     this.worker.onmessage = (e) => {
       if (e.data.command === 'ready') {
         this.ready = true
+        this.onreadyResolve()
       } else {
         this.obsWorker.next(e.data)
       }
