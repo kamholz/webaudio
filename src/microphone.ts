@@ -27,7 +27,7 @@ export class Microphone {
   stream: MediaStream
   progressSubject: Subject<any> = new Subject()
   node: ScriptProcessorNode
-  config: {bufferLen: number, numChannels: number, sampleRate: number, experimentalStorage: boolean} = {bufferLen: 8192, numChannels: 1, sampleRate: 16000, experimentalStorage: false}
+  config: {bufferLen: number, numChannels: number, resample: boolean, sampleRate: number, experimentalStorage: boolean} = {bufferLen: 8192, numChannels: 1, resample: true, sampleRate: 16000, experimentalStorage: false}
   recording: boolean = false
   playing: boolean = false
   hasData: boolean = false
@@ -50,6 +50,7 @@ export class Microphone {
     this.debugMode = config && config.debug ? config.debug : false
     if (config) {
       if (config.resample === false) {
+        this.config.resample = false
         this.config.sampleRate = this.audioContext.sampleRate
       } else if (config.resampleRate) {
         if (config.resampleRate < 3000 || config.resampleRate >= this.audioContext.sampleRate) {
@@ -245,47 +246,53 @@ export class Microphone {
     })
   }
 
-  _saveSegment(): Promise<RecordStats> {
-    const reSampleBuffer = (inputBuffer: Float32Array): Promise<Float32Array> => {
-      let numFrames = ~~((inputBuffer.length / this.audioContext.sampleRate) * this.config.sampleRate)
-      let offCont = new OfflineAudioContext(1, numFrames, this.config.sampleRate)
-      let newBuffer = offCont.createBuffer(1, inputBuffer.length, this.audioContext.sampleRate)
-      newBuffer.copyToChannel(inputBuffer, 0)
-      let source = offCont.createBufferSource()
-      source.buffer = newBuffer
-      source.connect(offCont.destination)
-      source.start()
-      return offCont.startRendering().then((ab: AudioBuffer) => {
-        let fa = new Float32Array(ab.getChannelData(0))
-        return fa
-      })
-    }
+  _reSampleBuffer(inputBuffer: Float32Array): Promise<Float32Array> {
+    let numFrames = ~~((inputBuffer.length / this.audioContext.sampleRate) * this.config.sampleRate)
+    let offCont = new OfflineAudioContext(1, numFrames, this.config.sampleRate)
+    let newBuffer = offCont.createBuffer(1, inputBuffer.length, this.audioContext.sampleRate)
+    newBuffer.copyToChannel(inputBuffer, 0)
+    let source = offCont.createBufferSource()
+    source.buffer = newBuffer
+    source.connect(offCont.destination)
+    source.start()
+    return offCont.startRendering().then((ab: AudioBuffer) => {
+      let fa = new Float32Array(ab.getChannelData(0))
+      return fa
+    })
+  }
 
+  _saveSegment(): Promise<RecordStats> {
     return new Promise((resolve) => {
       //let numFrames = ~~((rawbuffer.length / this.audioContext.sampleRate) * this.config.sampleRate)
       //this.debug('numframes',numFrames, 'from', rawbuffer.length, this.audioContext.sampleRate, this.config.sampleRate)
       this.processing = true
       let rTotalLen: number = 0
       let rProms: Promise<Float32Array>[] = []
+      let results: Float32Array[] = []
       this._getBufferFromWorker().subscribe(
         (d) => {
           this.debug('getBufferFromWorker2() returned',d)
-          rProms.push(reSampleBuffer(d))
+          if (this.config.resample) {
+            rProms.push(this._reSampleBuffer(d))
+          } else {
+            results.push(d)
+          }
         },
         null,
-        () => {
+        async () => {
           this.debug('*** getBufferFromWorker2() completed')
-          Promise.all(rProms).then((results) => {
-            for (let r of results) {
-              rTotalLen += r.length
-            }
-            this.finalBuffers.push(this.mergeBuffers(results, rTotalLen))
-            this.startRecording = null
-            this.debug('finalbuff', this.finalBuffers)
-            this.processing = false
-            this.worker.postMessage({command: 'clear'})
-            resolve(this.getLastLength())
-          })
+          if (this.config.resample) {
+            results = await Promise.all(rProms)
+          }
+          for (let r of results) {
+            rTotalLen += r.length
+          }
+          this.finalBuffers.push(this.mergeBuffers(results, rTotalLen))
+          this.startRecording = null
+          this.debug('finalbuff', this.finalBuffers)
+          this.processing = false
+          this.worker.postMessage({command: 'clear'})
+          resolve(this.getLastLength())
         }
       )
     })
