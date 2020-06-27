@@ -349,6 +349,17 @@ export class Microphone {
     return this._arraysToWav(this.finalBuffers)
   }
 
+  stripMs(ms: number) {
+    const lastIdx = this.finalBuffers.length - 1
+    if (lastIdx < 0) {
+      return
+    }
+    const samples = this.config.sampleRate * ms / 1000
+    if (this.finalBuffers[lastIdx].length >= samples) {
+      this.finalBuffers[lastIdx] = this.finalBuffers[lastIdx].slice(0, this.finalBuffers[lastIdx].length - samples)
+    }
+  }
+
   _playBuffers(buffers: Float32Array[]): Promise<any> {
     return new Promise((resolve, reject) => {
       if (this.playing) {
@@ -453,7 +464,7 @@ export class Microphone {
   }
   // Wave writing stuff
   //
-  _arraysToWav (audioData: Float32Array[], channels = 1 , sampleRate = this.config.sampleRate): Blob {
+  _arraysToWav (audioData: Float32Array[], channels = 1, sampleRate = this.config.sampleRate): Blob {
     const floatTo16Bit = (samples: Float32Array): Int16Array => {
       var buffer = new ArrayBuffer(samples.length * 2)
       var view = new DataView(buffer)
