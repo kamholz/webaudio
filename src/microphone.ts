@@ -33,7 +33,7 @@ export class Microphone {
   hasData: boolean = false
   stopping: boolean = false
   stopTick: number = 0
-  startFlag: boolean = false
+  startFlag: number = 0
   worker: Worker
   ready: boolean = false
   onready: Promise<any> = null
@@ -120,8 +120,14 @@ export class Microphone {
       if (!this.recording) {
         rtype = 2 // fade out
       } else if (this.startFlag) {
-        rtype = 1 // fade in
-        this.startFlag = false
+        if (cdat.every(sample => sample === 0)) {
+          this.startFlag = 2 // at least one initial all-zero buffer
+          return
+        }
+        if (this.startFlag === 1) {
+          rtype = 1 // fade in
+        }
+        this.startFlag = 0
       }
       this.worker.postMessage({
         command: 'record',
@@ -132,7 +138,7 @@ export class Microphone {
     this.sourceNode.connect(this.node)
     this.node.connect(this.audioContext.destination) 
     this.startRecording = new Date()
-    this.startFlag = true
+    this.startFlag = 1
     this.recording = true
     this.stopping = false
     this._progressTick()
